@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, mail_row with context %}
+{% block title %}{{ _('Sent') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Sent') }} <span class="muted small">({{ total }})</span></h1>
+  <a class="btn" href="{{ url_for('pqmail.compose_page') }}">&#9993; {{ _('Compose') }}</a>
+</div>
+
+{% if items %}
+  {% for item in items %}{{ mail_row(item, 'to') }}{% endfor %}
+  {{ pagination(page, pages, 'pqmail.sent') }}
+{% else %}
+  <div class="card"><p class="muted">{{ _('Nothing sent yet.') }}</p></div>
+{% endif %}
+{% endblock %}

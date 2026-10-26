@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% set no_lang_switch = true %}
+{% block title %}{{ _('Recovery codes') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Your recovery codes') }}</h1></div>
+<div class="card">
+  <p class="badge badge-warn block-badge">&#9888; {{ _('Save these now. They are shown only once and are stored only as hashes. Each code can be used one time if you lose your authenticator.') }}</p>
+  <ul class="status-list codes">
+    {% for c in codes %}<li class="mono">{{ c }}</li>{% endfor %}
+  </ul>
+  <div class="form-actions">
+    <a class="btn" href="{{ url_for('pqmail.settings_page') }}">{{ _("I've saved them") }}</a>
+  </div>
+</div>
+{% endblock %}

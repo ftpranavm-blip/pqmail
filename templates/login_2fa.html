@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Two-factor sign-in') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Two-factor authentication') }}</h1></div>
+<div class="grid grid-2">
+  <div class="card">
+    <p class="muted small">{{ _('Passphrase accepted for %(email)s. Enter the 6-digit code from your authenticator app, or one of your recovery codes.', email=email) }}</p>
+    <form method="post" action="{{ url_for('pqmail.login_2fa_submit') }}" autocomplete="off">
+      {{ csrf_field() }}
+      <label for="code">{{ _('Code') }}</label>
+      <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code"
+             maxlength="20" required autofocus placeholder="123456">
+      <div class="form-actions"><button class="btn" type="submit">{{ _('Verify and sign in') }}</button></div>
+    </form>
+    <form method="post" action="{{ url_for('pqmail.logout') }}" class="mt-14">
+      {{ csrf_field() }}
+      <button class="btn btn-ghost btn-sm" type="submit">{{ _('Cancel') }}</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3>{{ _('Lost your phone?') }}</h3>
+    <p class="muted small">{{ _('Use one of the recovery codes you saved when you turned two-factor on (format xxxx-xxxx-xxxx). Each code works once.') }}</p>
+  </div>
+</div>
+{% endblock %}

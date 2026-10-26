@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Security{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Security Dashboard</h1></div>
+
+<div class="grid grid-2">
+  <div class="card security-panel">
+    <h3 class="section-title">Security status</h3>
+    <ul class="status-list">
+      <li><span class="check-ok">✓</span> End-to-End Encryption — AES-256-GCM with fresh nonces</li>
+      <li><span class="check-ok">✓</span> Post-Quantum Key Exchange — {{ algos.kem.name }} encapsulation</li>
+      <li><span class="check-ok">✓</span> Key Derivation — {{ algos.kdf.name }}</li>
+      <li><span class="check-ok">✓</span> Digital Signature — {{ algos.signature.name }}</li>
+      <li><span class="check-ok">✓</span> Sender Verification — signature + published key fingerprint</li>
+      <li><span class="check-ok">✓</span> Tamper Detection — AEAD tag + signature, fail-closed display</li>
+      <li><span class="check-ok">✓</span> Private Key Storage — Argon2id + AES-256-GCM local keystore</li>
+    </ul>
+    <p class="muted small mb-0">
+      "Your email was encrypted on the sender's device and decrypted only on the recipient's device."
+    </p>
+  </div>
+
+  <div>
+    <div class="card">
+      <h3 class="section-title">Threat model</h3>
+      <table class="data small">
+        <tr><th>Threat</th><th>Protection</th></tr>
+        <tr><td>Eavesdropping</td><td>E2EE (AES-256-GCM under a hybrid {{ algos.hybrid.name }} key)</td></tr>
+        <tr><td>Server compromise</td><td>Server stores only ciphertext envelopes</td></tr>
+        <tr><td>Message tampering</td><td>GCM authentication tag + ML-DSA signature</td></tr>
+        <tr><td>Sender impersonation</td><td>ML-DSA-65 signatures over the canonical envelope</td></tr>
+        <tr><td>Harvest-now-decrypt-later</td><td>PQC key establishment resists future quantum attacks on the public-key part</td></tr>
+        <tr><td>Private key theft</td><td>Keys encrypted at rest (Argon2id); unlocked keys RAM-only, TTL-limited</td></tr>
+        <tr><td>AES-GCM nonce reuse</td><td>Fresh CSPRNG nonce + fresh session key per message</td></tr>
+        <tr><td>Weakness in one algorithm</td><td>Hybrid exchange: secure unless both X25519 and ML-KEM are broken</td></tr>
+        <tr><td>Replay</td><td>Per-mailbox ledger of every message id ever received (survives deletion)</td></tr>
+        <tr><td>Silent key swap</td><td>Hash-chained key transparency log, re-verified on every view</td></tr>
+        <tr><td>Stolen passphrase (web sign-in)</td><td>Optional TOTP second factor + recovery codes</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Algorithm suite</h3>
+      <table class="data small">
+        {% for key, a in algos.items() %}
+        <tr><td>{{ a.role }}</td><td><span class="badge badge-info">{{ a.name }}</span>
+            <span class="muted">({{ a.standard }})</span></td></tr>
+        {% endfor %}
+      </table>
+      {% if mode == 'real' %}
+      <p class="small badge badge-warn">Real Email Mode is active: SMTP/IMAP transport TLS protects
+      the hops to your mail server — it is separate from (and additional to) this end-to-end encryption.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="section-title">Known limitations (honest disclosure)</h3>
+  <ul class="status-list small muted">
+    <li>Educational prototype — not audited; do not use for real sensitive data.</li>
+    <li>Local key directory has no PKI: key authenticity relies on the local directory + fingerprints.</li>
+    <li>No forward secrecy across messages; a stolen unlocked session could read captured traffic for that identity.</li>
+    <li>Replay protection is per mailbox (ledger + age limit); a message can still be re-delivered to a mailbox that never received it.</li>
+    <li>The transparency log is local: it detects tampering with this directory but cannot prove other users see the same history.</li>
+    <li>Two-factor protects the web sign-in, not offline guessing of a stolen keystore file.</li>
+    <li>Python objects holding keys are not wiped from memory on GC (a Python runtime limitation).</li>
+    <li>QKD page is a simulation; it does not add real-world security.</li>
+  </ul>
+</div>
+{% endblock %}

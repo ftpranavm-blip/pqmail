@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Settings') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Settings') }}</h1></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3 class="section-title">{{ _('Mode') }}</h3>
+    <p class="muted small">
+      {{ _('Demo Mode needs no internet and no mail server — everything is local. Real Email Mode sends the encrypted envelope via SMTP and fetches via IMAP. Configure the SMTP_* / IMAP_* variables in your .env file (copy .env.example). Use an app password, never your main password.') }}
+    </p>
+    <table class="data small">
+      <tr><th>{{ _('SMTP (sending) configured') }}</th><td>{{ _('yes') if smtp_configured else _('no - Real Email Mode cannot send') }}</td></tr>
+      <tr><th>{{ _('IMAP (receiving) configured') }}</th><td>{{ _('yes') if imap_configured else _('no - cannot fetch mail from a server') }}</td></tr>
+    </table>
+    <form method="post" action="{{ url_for('pqmail.set_mode') }}">
+      {{ csrf_field() }}
+      <input type="hidden" name="mode" value="{{ 'demo' if mode == 'real' else 'real' }}">
+      <div class="form-actions">
+        <button class="btn {{ 'btn-ghost' if mode == 'real' }}" type="submit">
+          {{ _('Switch to Demo Mode') if mode == 'real' else _('Switch to Real Email Mode') }}
+        </button>
+      </div>
+    </form>
+    <p class="muted small mb-0">
+      {{ _('Note: transport TLS (SMTP/IMAP) and end-to-end encryption are separate layers. In Real Email Mode the server still only sees the encrypted envelope.') }}
+    </p>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">{{ _('OS keyring integration') }}</h3>
+    {% if keyring_available %}
+      <p class="muted small">
+        {{ _('An OS keyring backend is available. Enrolling stores a random vault key in the OS credential store so you can sign in from the login page without typing the passphrase. Your passphrase keeps working. Anyone who can use this operating-system account and this browser could then sign in as you, so enrol only on a machine you trust. Rotating your keys removes the enrollment.') }}
+      </p>
+      {% if keyring_enrolled %}
+        <p><span class="badge badge-ok">{{ _('Enrolled') }}</span></p>
+        <form method="post" action="{{ url_for('pqmail.settings_keyring_remove') }}">
+          {{ csrf_field() }}
+          <div class="form-actions">
+            <button class="btn btn-ghost btn-sm" type="submit">{{ _('Remove enrollment') }}</button>
+          </div>
+        </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('pqmail.settings_keyring') }}">
+      {{ csrf_field() }}
+        <label for="passphrase">{{ _('Confirm your current passphrase to enroll') }}</label>
+        <input type="password" id="passphrase" name="passphrase" required>
+        <div class="form-actions">
+          <button class="btn btn-sm" type="submit"
+                  data-confirm="{{ _('Enroll this keystore into the OS keyring?') }}">{{ _('Enroll') }}</button>
+        </div>
+      </form>
+    {% else %}
+      <p class="muted small">{{ _('No OS keyring backend detected on this machine — passphrase unlocking remains the default.') }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">{{ _('Two-factor authentication') }}</h3>
+    <p class="muted small">{{ _('Add a 6-digit code from an authenticator app to your sign-in. The secret is kept inside your encrypted keystore.') }}</p>
+    <p>{% if twofa_enabled %}<span class="badge badge-ok">{{ _('On') }}</span>{% else %}<span class="badge badge-warn">{{ _('Off') }}</span>{% endif %}</p>
+    <div class="form-actions"><a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.twofa_setup') }}">{{ _('Manage') }}</a></div>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">{{ _('Data locations') }}</h3>
+    <table class="data small">
+      <tr><th>Database</th><td class="mono">data/pqmail.db</td></tr>
+      <tr><th>Keystores</th><td class="mono">data/keys/ (encrypted, outside web folders)</td></tr>
+      <tr><th>Key archive</th><td class="mono">data/keys/archive/</td></tr>
+      <tr><th>Logs (safe events only)</th><td class="mono">data/logs/pqmail.log</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">{{ _('Session') }}</h3>
+    <p class="muted small">
+      {{ _('Unlocked private keys live in RAM for 15 minutes of activity, then expire. Signing out erases them immediately. No private key material is ever stored in cookies or browser storage.') }}
+    </p>
+    <div class="form-actions">
+      <form method="post" action="{{ url_for('pqmail.logout') }}" class="inline-form">
+        {{ csrf_field() }}
+        <button class="btn btn-ghost btn-sm" type="submit">{{ _('Sign out & wipe keys') }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

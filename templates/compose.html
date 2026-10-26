@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Compose') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Compose encrypted email') }}</h1></div>
+
+{% if draft_kind == 'reply' %}<p class="badge badge-info">&#8617; {{ _('Replying to a verified message') }}</p>{% endif %}
+{% if draft_kind == 'forward' %}<p class="badge badge-info">&#8618; {{ _('Forwarding a verified message') }}</p>{% endif %}
+
+<div class="grid grid-2">
+  <div class="card">
+    <form method="post" action="{{ url_for('pqmail.compose_submit') }}" enctype="multipart/form-data">
+      {{ csrf_field() }}
+      <label for="to">{{ _('To') }}</label>
+      <input type="email" id="to" name="to" list="contact-list" placeholder="bob@pqmail.local"
+             value="{{ draft.to }}" required {{ 'autofocus' if not draft.to }}>
+      <datalist id="contact-list">
+        {% for c in contacts %}<option value="{{ c.contact_email }}">{% endfor %}
+      </datalist>
+
+      <label for="subject">{{ _('Subject') }}</label>
+      <input type="text" id="subject" name="subject" maxlength="200" placeholder="Project Meeting"
+             value="{{ draft.subject }}">
+
+      <label for="body">{{ _('Message') }}</label>
+      <textarea id="body" name="body" maxlength="100000"
+        placeholder="Hello Bob, this message is protected using post-quantum cryptography.">{{ draft.body }}</textarea>
+
+      <label for="attachments">{{ _('Attachments') }}
+        <span class="muted small">({{ _('up to %(n)s files, %(mb)s MB in total', n=max_attachments, mb=max_attachment_mb) }})</span></label>
+      <input type="file" id="attachments" name="attachments" multiple>
+      <p class="muted small mb-0">{{ _('Files are encrypted together with the message; names and contents never leave this device in clear.') }}</p>
+
+      <div class="form-actions">
+        <button class="btn" type="submit">&#128274; {{ _('Encrypt & Send') }}</button>
+      </div>
+    </form>
+  </div>
+
+  <div>
+    <div class="card security-panel">
+      <h3 class="section-title">{{ _('Security') }}</h3>
+      <div class="check-row"><span class="check-ok">&#9745;</span> {{ _('End-to-End Encryption') }}</div>
+      <div class="check-row"><span class="check-ok">&#9745;</span> {{ _('Hybrid X25519 + ML-KEM-768 key exchange') }}</div>
+      <div class="check-row"><span class="check-ok">&#9745;</span> {{ _('Digital Signature') }}</div>
+      <p class="muted small mb-0">
+        {{ _('These protections are always applied — they cannot be disabled.') }}
+      </p>
+    </div>
+    <div class="card">
+      <h3 class="section-title">{{ _('What will happen') }}</h3>
+      <ul class="status-list small">
+        <li>1. {{ _("Fetch the recipient's public keys from the directory") }}</li>
+        <li>2. {{ _('Run X25519 and ML-KEM-768 and combine both secrets') }}</li>
+        <li>3. {{ _('Derive an AES-256 key with') }} <strong>{{ algos.kdf.name }}</strong></li>
+        <li>4. {{ _('Encrypt subject, body and attachments with') }} <strong>{{ algos.symmetric.name }}</strong></li>
+        <li>5. {{ _('Sign the envelope with') }} <strong>{{ algos.signature.name }}</strong></li>
+        <li>6. {{ _('Send — only ciphertext leaves this device') }}</li>
+      </ul>
+      {% if mode == 'real' %}
+      <p class="small badge badge-warn">{{ _('Real Email Mode: the encrypted envelope is sent via configured SMTP.') }}</p>
+      {% else %}
+      <p class="small badge badge-info">{{ _('Demo Mode: delivery to the local demo mailbox.') }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

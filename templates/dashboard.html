@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Dashboard') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Dashboard') }}</h1>
+  <a class="btn" href="{{ url_for('pqmail.compose_page') }}">&#9993; {{ _('Compose encrypted email') }}</a>
+</div>
+
+{% if key_status == 'mismatch' %}
+<div class="flash flash-danger" role="alert">
+  &#9888; {{ _('The public key listed in the directory for your address does NOT match your keystore. Someone may have replaced it. Check the transparency log, then re-publish your keys.') }}
+  <a href="{{ url_for('pqmail.transparency', email=nav_user_email) }}">{{ _('Open the log') }}</a>
+</div>
+{% elif key_status == 'missing' %}
+<div class="flash flash-warning" role="alert">{{ _('Your public keys are not in the directory yet. Publish them under Security / Keys so others can write to you.') }}</div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="card stat"><div class="num">{{ stats.unread_emails }}</div><div class="lbl">{{ _('Unread') }}</div></div>
+  <div class="card stat"><div class="num">{{ stats.inbox_emails }}</div><div class="lbl">{{ _('Received (encrypted)') }}</div></div>
+  <div class="card stat"><div class="num">{{ stats.sent_emails }}</div><div class="lbl">{{ _('Sent (encrypted)') }}</div></div>
+  <div class="card stat"><div class="num">{{ stats.trash_emails }}</div><div class="lbl">{{ _('In trash') }}</div></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card security-panel">
+    <h3 class="section-title">{{ _('Quantum-Safe Protection — active') }}</h3>
+    <ul class="status-list small">
+      <li><span class="check-ok">✓</span> {{ _('End-to-end encryption (AES-256-GCM)') }}</li>
+      <li><span class="check-ok">✓</span> {{ _('Hybrid key exchange') }} ({{ algos.hybrid.name }})</li>
+      <li><span class="check-ok">✓</span> {{ _('Post-quantum digital signatures') }} ({{ algos.signature.name }})</li>
+      <li><span class="check-ok">✓</span> {{ _('Sender verification + tamper detection') }}</li>
+      <li><span class="check-ok">✓</span> {{ _('Private keys encrypted at rest (Argon2id + AES-GCM)') }}</li>
+    </ul>
+    <p class="muted small mb-0">
+      {{ _("Your email was encrypted on the sender's device and can only be decrypted on the recipient's device.") }}
+      <a href="{{ url_for('pqmail.security_page') }}">{{ _('Security model') }}</a>
+    </p>
+  </div>
+  <div class="card">
+    <h3 class="section-title">{{ _('Your identity') }}</h3>
+    {% if keystore_info %}
+      <p><strong>{{ _('Keys created:') }}</strong> <span class="mono small">{{ keystore_info.created_at }}</span></p>
+      <p><strong>{{ _('KEM fingerprint') }}</strong><br><span class="mono small">{{ keystore_info.kem_fingerprint }}</span></p>
+      <p><strong>{{ _('Signature fingerprint') }}</strong><br><span class="mono small">{{ keystore_info.sig_fingerprint }}</span></p>
+    {% else %}
+      <p class="muted">{{ _('Keys are locked. Sign in again to unlock.') }}</p>
+    {% endif %}
+    <div class="form-actions">
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.keys_page') }}">{{ _('Manage keys') }}</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.qkd_page') }}">{{ _('Run QKD simulation') }}</a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="section-title">{{ _('Current algorithm suite') }}</h3>
+  <table class="data">
+    <tr><th>{{ _('Purpose') }}</th><th>{{ _('Algorithm') }}</th><th>{{ _('Standard') }}</th><th>{{ _('Role') }}</th></tr>
+    {% for key, a in algos.items() %}
+    <tr>
+      <td>{{ key }}</td>
+      <td><span class="badge badge-info">{{ a.name }}</span></td>
+      <td class="small muted">{{ a.standard }}</td>
+      <td class="small muted">{{ a.role }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

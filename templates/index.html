@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Welcome') }}{% endblock %}
+{% block content %}
+<div class="hero">
+  <h1>{{ _('Email that stays private —') }} <span class="grad">{{ _('even against quantum computers') }}</span></h1>
+  <p>
+    {{ _('PQMail is an educational email client protected by post-quantum cryptography: end-to-end encrypted messages with hybrid X25519 + ML-KEM-768 key exchange, post-quantum digital signatures (ML-DSA-65), encrypted attachments and encrypted local key storage. Try it instantly with the built-in demo identities.') }}
+  </p>
+  <div class="cta">
+    <a class="btn" href="{{ url_for('pqmail.login_page') }}">{{ _('Open the demo') }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('pqmail.register_page') }}">{{ _('Create an identity') }}</a>
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <h3>🔐 {{ _('End-to-end encryption') }}</h3>
+    <p class="muted small">
+      {{ _("Messages are encrypted on the sender's device with AES-256-GCM under a key established with hybrid X25519 + ML-KEM-768 — the mail server only ever sees ciphertext.") }}
+    </p>
+  </div>
+  <div class="card">
+    <h3>🛡 {{ _('Post-quantum signatures') }}</h3>
+    <p class="muted small">
+      {{ _('Every envelope is signed with ML-DSA-65. The recipient sees a clear verified / failed indicator and untrusted content is withheld.') }}
+    </p>
+  </div>
+  <div class="card">
+    <h3>⚛ {{ _('Quantum key distribution?') }}</h3>
+    <p class="muted small">
+      {{ _('Explore an educational BB84 simulation with noise, error correction and privacy amplification that shows how quantum physics exposes eavesdroppers — clearly separated from the real PQC protection.') }}
+    </p>
+  </div>
+</div>
+
+{% if demo_enabled %}
+<div class="card">
+  <h3>{{ _('Demo identities (created automatically)') }}</h3>
+  <table class="data">
+    <tr><th>{{ _('User') }}</th><th>{{ _('Email') }}</th><th>{{ _('Keystore passphrase') }}</th></tr>
+    {% for email, name in demo_users %}
+    <tr>
+      <td>{{ name }}</td>
+      <td class="mono">{{ email }}</td>
+      <td class="mono">{{ demo_passphrase }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted small">
+    {{ _('The passphrase unlocks the locally encrypted keystore (Argon2id + AES-256-GCM). Override it by setting PQMAIL_DEMO_PASSPHRASE before first start.') }}
+  </p>
+</div>
+{% endif %}
+{% endblock %}

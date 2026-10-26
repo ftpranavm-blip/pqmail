@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Create identity') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Create your quantum-safe identity') }}</h1></div>
+<div class="grid grid-2">
+  <div class="card">
+    <form method="post" action="{{ url_for('pqmail.register_submit') }}">
+      {{ csrf_field() }}
+      <label for="display_name">{{ _('Display name') }}</label>
+      <input type="text" id="display_name" name="display_name" maxlength="80" required autofocus>
+      <label for="reg_email">{{ _('Email address') }}</label>
+      <input type="email" id="reg_email" name="email" required>
+      <label for="passphrase">{{ _('Keystore passphrase (min 8 characters)') }}</label>
+      <input type="password" id="passphrase" name="passphrase" minlength="8" required>
+      <label for="confirm">{{ _('Repeat passphrase') }}</label>
+      <input type="password" id="confirm" name="confirm" minlength="8" required>
+      <div class="form-actions">
+        <button class="btn" type="submit">{{ _('Generate my PQC keys') }}</button>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <h3>{{ _('What happens on registration?') }}</h3>
+    <ul class="status-list small">
+      <li>✓ {{ _('An ML-KEM-768 key pair is generated (post-quantum key establishment)') }}</li>
+      <li>✓ {{ _('An X25519 key pair is generated (the classical half of the hybrid key exchange)') }}</li>
+      <li>✓ {{ _('An ML-DSA-65 key pair is generated (digital signatures)') }}</li>
+      <li>✓ {{ _('Public keys get SHA-256 fingerprints you can verify out-of-band') }}</li>
+      <li>✓ {{ _('Private keys are encrypted with Argon2id + AES-256-GCM and stored locally') }}</li>
+      <li>✓ {{ _('Your public keys are published to the local key directory so others can write to you') }}</li>
+      <li>✗ {{ _('Private keys never leave this device — not to the server, not in backups') }}</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

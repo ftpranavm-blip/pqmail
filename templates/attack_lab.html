@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Attack lab') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Attack lab') }}</h1>
+  <form method="post" action="{{ url_for('pqmail.attack_lab_run') }}" class="inline-form">
+    {{ csrf_field() }}
+    <button class="btn" type="submit">&#9654; {{ _('Run all attacks') }}</button>
+  </form>
+</div>
+<p class="muted small">
+  {{ _('Each scenario launches a real attack against PQMail\'s own code inside a throw-away sandbox (temporary database, freshly generated identities alice / bob / mallory / eve). Your mailbox and keys are never touched. A green BLOCKED means the defence worked just now - it is a live check, not a diagram.') }}
+</p>
+
+{% if results %}
+  {% set blocked = results|selectattr('blocked')|list|length %}
+  <div class="card {{ 'security-panel' if blocked == results|length else 'security-panel failed' }}">
+    <h3 class="section-title">{{ _('%(b)s of %(t)s attacks blocked', b=blocked, t=results|length) }}</h3>
+  </div>
+  {% for r in results %}
+  <div class="card {{ 'attack-ok' if r.blocked else 'attack-bad' }}">
+    <div class="page-head">
+      <h3 class="section-title">{{ r.title }}</h3>
+      {% if r.blocked %}<span class="badge badge-ok">&#10003; {{ _('BLOCKED') }}</span>
+      {% else %}<span class="badge badge-bad">&#10007; {{ _('NOT BLOCKED') }}</span>{% endif %}
+    </div>
+    <p class="small"><strong>{{ _("Attacker's goal:") }}</strong> {{ r.attacker_goal }}</p>
+    <ol class="small">{% for step in r.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+    <p class="small"><strong>{{ _('Result:') }}</strong> {{ r.outcome }}</p>
+    <p class="muted small mb-0"><strong>{{ _('Defence:') }}</strong> {{ r.defence }}</p>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card"><p class="muted">{{ _('Press "Run all attacks" to start the sandboxed scenarios.') }}</p></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Key transparency log') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Key transparency log') }}</h1></div>
+
+<div class="card {{ 'security-panel' if report.ok else 'security-panel failed' }}">
+  <h3 class="section-title">
+    {% if report.ok %}<span class="check-ok">✓</span> {{ _('Log verified') }}
+    {% else %}<span class="check-bad">✗</span> {{ _('Log verification FAILED') }}{% endif %}
+  </h3>
+  <p class="muted small">
+    {{ _('Every change to the public-key directory is appended to a hash chain: each entry contains the hash of the previous one. Editing, deleting or re-ordering an entry breaks the chain, and a key swapped directly in the database no longer matches what the log recorded.') }}
+  </p>
+  <table class="data">
+    <tr><th>{{ _('Entries') }}</th><td>{{ report.entries }}</td></tr>
+    <tr><th>{{ _('Head hash') }}</th><td class="mono small">{{ report.head }}</td></tr>
+  </table>
+  <p class="muted small mb-0">{{ _('Compare the head hash with other users out-of-band: if it differs, your directories disagree about history.') }}</p>
+  {% for problem in report.chain_errors %}<p class="badge badge-bad block-badge">{{ problem }}</p>{% endfor %}
+  {% for problem in report.directory_mismatches %}<p class="badge badge-bad block-badge">&#9888; {{ problem }}</p>{% endfor %}
+</div>
+
+<div class="card">
+  <h3 class="section-title">{{ _('Entries') }}{% if focus %} — {{ focus }}{% endif %}</h3>
+  <form method="get" action="{{ url_for('pqmail.transparency') }}" class="form-actions">
+    <input type="text" name="email" value="{{ focus }}" placeholder="{{ _('Filter by address') }}" class="w-auto">
+    <button class="btn btn-ghost btn-sm" type="submit">{{ _('Filter') }}</button>
+    {% if focus %}<a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.transparency') }}">{{ _('Clear') }}</a>{% endif %}
+  </form>
+  <div class="scroll-x">
+  <table class="data">
+    <tr><th>#</th><th>{{ _('When') }}</th><th>{{ _('Address') }}</th><th>{{ _('Action') }}</th><th>{{ _('Fingerprint') }}</th><th>{{ _('Entry hash') }}</th></tr>
+    {% for e in entries %}
+    <tr>
+      <td>{{ e.seq }}</td>
+      <td class="small">{{ e.created_at }}</td>
+      <td class="mono small">{{ e.email }}</td>
+      <td><span class="badge {{ 'badge-bad' if e.action in ('revoke', 'replace') else 'badge-info' }}">{{ e.action }}</span></td>
+      <td class="mono small">{{ e.fingerprint[:14] }}…</td>
+      <td class="mono small">{{ e.entry_hash[:12] }}…</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">{{ _('No entries.') }}</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endblock %}

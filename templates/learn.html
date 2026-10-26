@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Learn{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Learn — the ideas behind PQMail</h1></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>What is encryption?</h3>
+    <p class="muted small">Scrambling information so only someone with the right key can read it.
+    Modern encryption is mathematically strong — the security lives in the keys, not in secrecy of the method.</p>
+  </div>
+  <div class="card">
+    <h3>Public vs private keys</h3>
+    <p class="muted small">Your <strong>public key</strong> is like an open padlock: anyone can use it to lock
+    (encrypt) a message to you. Your <strong>private key</strong> is the only key that opens it.
+    Public keys are shared freely; private keys never leave your device.</p>
+  </div>
+  <div class="card">
+    <h3>What is post-quantum cryptography (PQC)?</h3>
+    <p class="muted small">Cryptographic algorithms designed to resist attacks by <em>future large-scale
+    quantum computers</em>. Today's RSA/ECC would fall to such machines (Shor's algorithm);
+    PQC is built on different math — like lattices — believed hard even for quantum computers.
+    PQC runs on normal computers and networks.</p>
+  </div>
+  <div class="card">
+    <h3>What is ML-KEM? (FIPS 203)</h3>
+    <p class="muted small">The NIST-standardized <strong>key encapsulation mechanism</strong> based on
+    module lattices. One party encapsulates a shared secret to the recipient's public key;
+    only the recipient's private key can decapsulate it. PQMail uses <strong>ML-KEM-768</strong>
+    (192-bit security strength). It was standardized from CRYSTALS-Kyber —
+    "Kyber768" is the predecessor implementation name.</p>
+  </div>
+  <div class="card">
+    <h3>Why a hybrid exchange? (X25519 + ML-KEM)</h3>
+    <p class="muted small">ML-KEM is new and X25519 is old: a future quantum computer breaks X25519, but a
+    surprise weakness in the young lattice scheme is also possible. PQMail runs <strong>both</strong> and mixes the
+    two shared secrets into one key (the same idea as TLS <code>X25519MLKEM768</code>), so an attacker must
+    break both to read a message. See the live <a href="{{ url_for('pqmail.benchmarks_page') }}">benchmarks</a>
+    for the cost.</p>
+  </div>
+  <div class="card">
+    <h3>What is ML-DSA? (FIPS 204)</h3>
+    <p class="muted small">The NIST-standardized lattice-based <strong>digital signature</strong>.
+    A signature proves who sent data and that it was not changed. PQMail uses
+    <strong>ML-DSA-65</strong>, standardized from CRYSTALS-Dilithium ("Dilithium3" is the
+    predecessor name).</p>
+  </div>
+  <div class="card">
+    <h3>What is AES-GCM?</h3>
+    <p class="muted small">A fast, widely used <strong>authenticated encryption</strong> scheme:
+    it encrypts (confidentiality) and authenticates (integrity) at once. Any modification of the
+    ciphertext — even one bit — makes decryption fail loudly. PQMail uses AES-256-GCM with a
+    fresh random nonce for every message.</p>
+  </div>
+  <div class="card">
+    <h3>What is a digital signature?</h3>
+    <p class="muted small">Signing data with your <em>private</em> key creates a verifiable proof that
+    anyone with your <em>public</em> key can check. If verification fails, the data was altered
+    or did not come from you. PQMail signs the whole envelope — metadata included.</p>
+  </div>
+  <div class="card">
+    <h3>What is end-to-end encryption (E2EE)?</h3>
+    <p class="muted small">Encryption where only the endpoints (sender and recipient) can read the
+    message. Servers, network operators and eavesdroppers see only ciphertext.
+    In PQMail the encryption and decryption happen inside the app — never on a server.</p>
+  </div>
+  <div class="card">
+    <h3>What is QKD / BB84?</h3>
+    <p class="muted small"><strong>Quantum Key Distribution</strong> exchanges keys using quantum states
+    (photons). In the <strong>BB84</strong> protocol Alice encodes random bits in randomly chosen
+    bases; Bob measures in random bases. An eavesdropper's measurements unavoidably disturb the
+    states, creating detectable errors. Real QKD needs quantum hardware —
+    PQMail includes an <em>educational simulation</em> only, and QKD is not required for PQC.</p>
+  </div>
+  <div class="card">
+    <h3>Why hybrid ML-KEM + AES?</h3>
+    <p class="muted small">ML-KEM establishes a shared secret but doesn't encrypt arbitrary data.
+    So PQMail uses it to establish the key, then a fast symmetric cipher (AES-256-GCM) encrypts
+    the actual message — the same hybrid pattern used by TLS 1.3's post-quantum mode
+    (X25519MLKEM768).</p>
+  </div>
+  <div class="card">
+    <h3>What is HKDF?</h3>
+    <p class="muted small">A standard key-derivation function (RFC 5869) that turns the KEM's raw
+    shared secret into a proper AES-256 key, mixing in a random salt so every message has a
+    unique key even between the same two people.</p>
+  </div>
+  <div class="card">
+    <h3>Honest terminology</h3>
+    <p class="muted small">PQMail says <em>"designed to resist known quantum attacks"</em> — never
+    "quantum-proof". PQC security rests on computational assumptions; QKD security rests on
+    physics but needs hardware. This project uses the former for real protection and simulates
+    the latter for learning.</p>
+  </div>
+</div>
+{% endblock %}

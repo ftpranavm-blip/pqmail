@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ _('QKD simulator') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>⚛ {{ _('Educational QKD Simulation — BB84') }}</h1></div>
+
+<div class="card">
+  <p class="badge badge-warn block-badge">
+    ⚠ {{ _('This is a classical software simulation for teaching purposes. It does NOT provide the security of real quantum key distribution (which needs specialized quantum hardware) and it is NOT part of the email protection — that comes from PQC (ML-KEM / ML-DSA / AES-GCM).') }}
+  </p>
+  <div class="qkd-stage">
+    <div class="qkd-node"><div class="name">Alice</div><div class="role">{{ _('prepares qubits') }}</div></div>
+    <div class="qkd-channel">{{ '⚡ qubits (+ Eve?)' if result and result.eve_present else '⚡ qubits' }}</div>
+    <div class="qkd-node"><div class="name">Bob</div><div class="role">{{ _('measures qubits') }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('pqmail.qkd_run') }}">
+    {{ csrf_field() }}
+    <div class="grid grid-3">
+      <div>
+        <label for="bits">{{ _('Number of qubits') }} ({{ defaults.min }}–{{ defaults.max }})</label>
+        <input type="number" id="bits" name="bits" min="{{ defaults.min }}" max="{{ defaults.max }}"
+               value="{{ defaults.bits }}" step="64">
+      </div>
+      <div>
+        <label for="noise">{{ _('Channel noise (%%)') }} (0–{{ defaults.max_noise_percent }})</label>
+        <input type="number" id="noise" name="noise" min="0" max="{{ defaults.max_noise_percent }}"
+               step="0.5" value="{{ defaults.noise_percent }}">
+      </div>
+      <div>
+        <label for="intercept">{{ _("Eve's interception rate (%%)") }}</label>
+        <input type="number" id="intercept" name="intercept" min="0" max="100" step="5"
+               value="{{ defaults.intercept_percent }}">
+      </div>
+    </div>
+    <label class="check-row">
+      <input type="checkbox" name="eve" class="w-auto" {{ 'checked' if defaults.eve }}>
+      {{ _('Include Eve (intercept–resend eavesdropper)') }}
+    </label>
+    <p class="muted small mb-0">{{ _('Real channels are never perfect: noise alone creates a few %% of errors that Alice and Bob must correct without mistaking them for Eve. A lazy Eve who intercepts only some qubits may hide below the %(t)s%% threshold — but she also learns only a part of the key, which privacy amplification then removes.', t=defaults.threshold_percent) }}</p>
+    <div class="form-actions">
+      <button class="btn" type="submit">{{ _('Run simulation') }}</button>
+    </div>
+  </form>
+</div>
+
+{% if error %}
+  <div class="flash flash-danger">{{ error }}</div>
+{% endif %}
+
+{% if result %}
+  <div class="grid grid-4">
+    <div class="card stat">
+      <div class="num">{{ result.qber_percent }}</div>
+      <div class="lbl">{{ _('Estimated error rate (QBER)') }}</div>
+    </div>
+    <div class="card stat">
+      <div class="num">{{ result.sifted_length }}</div>
+      <div class="lbl">{{ _('Sifted key bits') }}</div>
+    </div>
+    <div class="card stat">
+      <div class="num">{{ result.secret_key_length }}</div>
+      <div class="lbl">{{ _('Final secret key bits') }}</div>
+    </div>
+    <div class="card stat">
+      <div class="num">{{ _('DETECTED') if result.eve_detected else _('not detected') }}</div>
+      <div class="lbl">{{ _('Eavesdropping (threshold %(t)s%%)', t=defaults.threshold_percent) }}</div>
+    </div>
+  </div>
+
+  <div class="card {{ 'security-panel' if not result.aborted else 'security-panel failed' }}">
+    <h3 class="section-title">{{ _('Result') }}</h3>
+    {% if result.eve_detected %}
+      <p><span class="check-bad">✗</span> <strong>{{ _('Protocol aborted.') }}</strong>
+      {{ _('The measured error rate (%(q)s) exceeds the abort threshold (%(t)s%%). Eve\'s measurements disturbed the qubits — Alice and Bob throw the key away.', q=result.qber_percent, t=defaults.threshold_percent) }}</p>
+    {% elif result.aborted %}
+      <p><span class="check-bad">✗</span> <strong>{{ _('Protocol aborted.') }}</strong>
+      {{ _('Error correction could not reconcile the keys; they are discarded.') }}</p>
+    {% elif result.secret_key_length == 0 %}
+      <p><span class="check-bad">✗</span> {{ _('The error rate leaves no provably secret bits after privacy amplification: no key is produced.') }}</p>
+    {% else %}
+      <p><span class="check-ok">✓</span> <strong>{{ _('Key agreement succeeded.') }}</strong>
+      {{ _('Alice and Bob share %(n)s identical secret bits (QBER %(q)s).', n=result.secret_key_length, q=result.qber_percent) }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card" id="qkd-steps">
+    <h3 class="section-title">{{ _('Step through the protocol') }}</h3>
+    <div class="qkd-steps" role="group" aria-label="{{ _('Protocol steps') }}">
+      {% for n, label in [(1, _('Prepare')), (2, _('Transmit')), (3, _('Measure')), (4, _('Sift')), (5, _('Estimate errors')), (6, _('Correct errors')), (7, _('Amplify privacy'))] %}
+      <button type="button" class="btn btn-ghost btn-sm" data-qkd-step="{{ n }}" aria-pressed="{{ 'true' if n == 1 else 'false' }}">{{ n }}. {{ label }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="qkd-step active" data-step="1">
+      <p><strong>1. {{ _('Prepare') }}</strong> — {{ _('Alice picks %(n)s random bits and, for each, a random basis (+ or ×) in which to encode it as a qubit.', n=result.n_bits) }}</p>
+    </div>
+    <div class="qkd-step" data-step="2">
+      <p><strong>2. {{ _('Transmit') }}</strong> —
+      {% if result.eve_present %}{{ _('Eve intercepted %(a)s of %(n)s qubits (%(p)s%%), measured each in a random basis and resent it.', a=result.eve_intercepted, n=result.n_bits, p=(result.intercept_fraction*100)|round|int) }}
+      {% else %}{{ _('No eavesdropper: the qubits travel unobserved.') }}{% endif %}
+      {% if result.noise %}{{ _('The channel also flips about %(p)s%% of the detected bits.', p=(result.noise*100)|round(1)) }}{% endif %}</p>
+    </div>
+    <div class="qkd-step" data-step="3">
+      <p><strong>3. {{ _('Measure') }}</strong> — {{ _('Bob measures every qubit in a random basis. When his basis differs from the one used to prepare it, his result is a coin flip.') }}</p>
+    </div>
+    <div class="qkd-step" data-step="4">
+      <p><strong>4. {{ _('Sift') }}</strong> — {{ _('In public, Alice and Bob compare only their bases (never the bits) and keep the %(s)s positions where they matched.', s=result.sifted_length) }}</p>
+    </div>
+    <div class="qkd-step" data-step="5">
+      <p><strong>5. {{ _('Estimate errors') }}</strong> — {{ _('They publicly compare %(n)s sifted bits (these are sacrificed) and find %(e)s mismatches: QBER = %(q)s.', n=result.sample_positions|length, e=result.sample_errors, q=result.qber_percent) }}
+      {% if result.eve_present %} {{ _('In a simulation we can peek: Eve really knows %(k)s of the sifted key.', k=result.eve_knowledge_percent) }}{% endif %}</p>
+    </div>
+    <div class="qkd-step" data-step="6">
+      <p><strong>6. {{ _('Correct errors') }}</strong> —
+      {% if result.aborted and result.eve_detected %}{{ _('Skipped: the protocol was aborted at step 5.') }}
+      {% else %}{{ _('Cascade-style parity checks fixed %(b)s errors (%(a)s left) over %(p)s passes. This revealed %(l)s parity bits to the public, which Eve may also use.', b=result.ec_errors_before, a=result.ec_errors_after, p=result.ec_passes, l=result.ec_leaked_bits) }}{% endif %}</p>
+    </div>
+    <div class="qkd-step" data-step="7">
+      <p><strong>7. {{ _('Amplify privacy') }}</strong> —
+      {% if result.secret_key_length %}{{ _('A public random Toeplitz matrix hashes the %(n)s corrected bits down to %(m)s secret bits (%(f)s%% of the key; the rest is given up to Eve\'s possible knowledge and the %(g)s-bit safety margin).', n=result.final_key_length, m=result.secret_key_length, f=(result.secret_fraction*100)|round|int, g=10) }}
+      {% else %}{{ _('No secret bits remain.') }}{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="section-title">{{ _("Alice's secret key") }}</h3>
+      <div class="key-display">{{ result.secret_key_hex }}</div>
+    </div>
+    <div class="card">
+      <h3 class="section-title">{{ _("Bob's secret key") }}</h3>
+      <div class="key-display">{{ result.secret_key_bob_hex }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">{{ _('Transcript (first %(a)s of %(b)s positions)', a=preview|length, b=result.n_bits) }}</h3>
+    <div class="scroll-x">
+    <table class="data">
+      <tr>
+        <th>#</th><th>{{ _('Alice bit') }}</th><th>{{ _('Alice basis') }}</th>
+        {% if result.eve_present %}<th>{{ _('Eve basis') }}</th><th>{{ _('Eve bit') }}</th>{% endif %}
+        <th>{{ _('Bob basis') }}</th><th>{{ _('Bob bit') }}</th><th>{{ _('Bases match') }}</th><th>{{ _('Sifted') }}</th><th>{{ _('Bit error') }}</th>
+      </tr>
+      {% for row in preview %}
+      <tr class="{{ 'sifted-on' if row.sifted else 'sifted-off' }}{{ ' row-error' if row.sifted and not row.match else '' }}">
+        <td>{{ row.position }}</td>
+        <td>{{ row.alice_bit }}</td>
+        <td>{{ row.alice_basis }}</td>
+        {% if result.eve_present %}<td>{{ row.eve_basis }}</td><td>{{ row.eve_bit }}</td>{% endif %}
+        <td>{{ row.bob_basis }}</td>
+        <td>{{ row.bob_bit }}</td>
+        <td>{{ '✓' if row.sifted else '—' }}</td>
+        <td>{{ _('kept') if row.sifted else _('discarded') }}</td>
+        <td>{{ '✗' if row.sifted and not row.match else '·' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    <p class="muted small">
+      {{ _('After sifting, Alice and Bob publicly compare a random sample (sacrificed) to estimate the error rate; the remaining bits are error-corrected and hashed into the final key. With Eve intercepting everything her wrong basis guesses randomize states, producing the characteristic ~25%% error rate.') }}
+    </p>
+  </div>
+{% endif %}
+
+<div class="card">
+  <h3 class="section-title">{{ _('PQC vs QKD — different technologies') }}</h3>
+  <div class="grid grid-2">
+    <div>
+      <p><strong>{{ _('Post-Quantum Cryptography (PQC)') }}</strong> — {{ _("software-based algorithms (ML-KEM, ML-DSA) designed to resist known quantum attacks. Runs on today's infrastructure.") }} <em>{{ _('This is the practical protection used by PQMail.') }}</em></p>
+    </div>
+    <div>
+      <p><strong>{{ _('Quantum Key Distribution (QKD)') }}</strong> — {{ _('distributes keys using quantum physics; eavesdropping visibly disturbs quantum states. Requires specialized quantum communication hardware in any real deployment.') }} <em>{{ _('Simulated here for education only.') }}</em></p>
+    </div>
+  </div>
+  <p class="muted small mb-0">{{ _('QKD is not required for PQC, and this simulation does not strengthen the email protection.') }}</p>
+</div>
+{% endblock %}

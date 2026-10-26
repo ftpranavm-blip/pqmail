@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Error') }}{% endblock %}
+{% block content %}
+<div class="hero">
+  <h1><span class="grad">{{ code }}</span></h1>
+  <p>{{ message }}</p>
+  <div class="cta">
+    <a class="btn" href="{{ url_for('pqmail.index') }}">{{ _('Back to home') }}</a>
+  </div>
+</div>
+{% endblock %}

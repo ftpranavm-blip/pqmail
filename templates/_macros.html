@@ -1,0 +1,33 @@
+{% macro pagination(page, pages, endpoint) %}
+{% if pages > 1 %}
+<nav class="pager" aria-label="{{ _('Pagination') }}">
+  {% if page > 1 %}<a class="btn btn-ghost btn-sm" href="{{ url_for(endpoint, page=page-1, **kwargs) }}">&larr; {{ _('Newer') }}</a>{% endif %}
+  <span class="muted small">{{ _('Page %(page)s of %(pages)s', page=page, pages=pages) }}</span>
+  {% if page < pages %}<a class="btn btn-ghost btn-sm" href="{{ url_for(endpoint, page=page+1, **kwargs) }}">{{ _('Older') }} &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro mail_row(item, show) %}
+<a class="mail-item {{ 'unread' if show == 'from' and not item.read }}"
+   href="{{ url_for('pqmail.message_view', message_id=item.message_id) }}">
+  <div class="who">{% if show == 'from' %}{{ item.sender }}{% else %}{{ _('To:') }} {{ item.recipient }}{% endif %}</div>
+  <div class="subj">
+    <div>
+      {% if item.subject %}{{ item.subject }}
+      {% elif show == 'from' %}<em>&#9888; {{ _('Unverified or unreadable message') }}</em>
+      {% else %}<em>&#128274; {{ _('Encrypted message') }}</em>{% endif %}
+      {% if item.attachments %}<span class="badge badge-info" title="{{ _('Attachments') }}">&#128206; {{ item.attachments }}</span>{% endif %}
+    </div>
+    <div>
+      {% if item.tampered_demo %}
+        <span class="badge badge-bad">&#9888; {{ _('Tampered (demo)') }}</span>
+      {% else %}
+        <span class="badge badge-ok">&#128274; {{ _('E2E encrypted') }}</span>
+        <span class="badge badge-ok">{{ 'X25519+ML-KEM' if item.hybrid else 'ML-KEM' }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="when">{{ item.timestamp }}</div>
+</a>
+{% endmacro %}

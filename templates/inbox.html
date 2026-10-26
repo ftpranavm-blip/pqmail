@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, mail_row with context %}
+{% block title %}{{ _('Inbox') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Inbox') }} <span class="muted small">({{ total }})</span></h1>
+  <div class="form-actions">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.inbox', filter=('all' if unread_only else 'unread')) }}">
+      {{ _('Show all') if unread_only else _('Unread only') }}
+    </a>
+    {% if mode == 'real' %}
+    <form method="post" action="{{ url_for('pqmail.inbox_fetch') }}" class="inline-form">
+      {{ csrf_field() }}
+      <button class="btn btn-ghost" type="submit">&#11015; {{ _('Fetch from IMAP') }}</button>
+    </form>
+    {% endif %}
+    <a class="btn" href="{{ url_for('pqmail.compose_page') }}">&#9993; {{ _('Compose') }}</a>
+  </div>
+</div>
+
+{% if items %}
+  {% for item in items %}{{ mail_row(item, 'from') }}{% endfor %}
+  {{ pagination(page, pages, 'pqmail.inbox', filter=('unread' if unread_only else None)) }}
+{% else %}
+  <div class="card">
+    <p class="muted">{{ _('Your inbox is empty. Ask Alice to send you a quantum-secure email, or switch user and send one to yourself.') }}</p>
+  </div>
+{% endif %}
+{% endblock %}

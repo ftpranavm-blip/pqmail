@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="{{ current_language() }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>{% block title %}PQMail{% endblock %} — Quantum-Secure Email</title>
+  <script src="{{ static_url('js/theme.js') }}"></script>
+  <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<a class="skip-link" href="#main">{{ _('Skip to content') }}</a>
+<nav class="topnav" aria-label="{{ _('Main') }}">
+  <a class="brand" href="{{ url_for('pqmail.index') }}">
+    <span class="brand-icon">⚛</span> PQ<span class="brand-accent">Mail</span>
+    <span class="brand-sub">{{ _('quantum-secure email') }}</span>
+  </a>
+  {% if nav_user_email %}
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links"
+          aria-label="{{ _('Menu') }}">&#9776;</button>
+  <div class="nav-links" id="nav-links">
+    <a href="{{ url_for('pqmail.dashboard') }}" class="{{ 'active' if request.path == '/dashboard' }}">{{ _('Dashboard') }}</a>
+    <a href="{{ url_for('pqmail.inbox') }}" class="{{ 'active' if request.path == '/inbox' }}">{{ _('Inbox') }}{% if nav_unread %} <span class="count-badge" aria-label="{{ _('%(n)s unread', n=nav_unread) }}">{{ nav_unread }}</span>{% endif %}</a>
+    <a href="{{ url_for('pqmail.compose_page') }}" class="{{ 'active' if request.path == '/compose' }}">{{ _('Compose') }}</a>
+    <a href="{{ url_for('pqmail.sent') }}" class="{{ 'active' if request.path == '/sent' }}">{{ _('Sent') }}</a>
+    <a href="{{ url_for('pqmail.trash') }}" class="{{ 'active' if request.path == '/trash' }}">{{ _('Trash') }}</a>
+    <a href="{{ url_for('pqmail.contacts') }}" class="{{ 'active' if request.path == '/contacts' }}">{{ _('Contacts') }}</a>
+    <details class="menu">
+      <summary>{{ _('Security') }} &#9662;</summary>
+      <div class="menu-items">
+        <a href="{{ url_for('pqmail.keys_page') }}">{{ _('Keys') }}</a>
+        <a href="{{ url_for('pqmail.transparency') }}">{{ _('Transparency log') }}</a>
+        <a href="{{ url_for('pqmail.attack_lab_page') }}">{{ _('Attack lab') }}</a>
+        <a href="{{ url_for('pqmail.security_page') }}">{{ _('Security model') }}</a>
+      </div>
+    </details>
+    <details class="menu">
+      <summary>{{ _('Learn') }} &#9662;</summary>
+      <div class="menu-items">
+        <a href="{{ url_for('pqmail.qkd_page') }}">{{ _('QKD simulator') }}</a>
+        <a href="{{ url_for('pqmail.benchmarks_page') }}">{{ _('Benchmarks') }}</a>
+        <a href="{{ url_for('pqmail.learn_page') }}">{{ _('Learn') }}</a>
+      </div>
+    </details>
+    <a href="{{ url_for('pqmail.settings_page') }}" class="{{ 'active' if request.path == '/settings' }}">{{ _('Settings') }}</a>
+  </div>
+  {% endif %}
+  <div class="nav-user">
+    {% if nav_user_email %}
+    <span class="mode-badge {{ 'mode-real' if nav_mode == 'real' else 'mode-demo' }}">
+      {{ _('Real Email Mode') if nav_mode == 'real' else _('Demo Mode') }}
+    </span>
+    <form method="post" action="{{ url_for('pqmail.set_mode') }}" class="inline-form">
+      {{ csrf_field() }}
+      <input type="hidden" name="mode" value="{{ 'demo' if nav_mode == 'real' else 'real' }}">
+      <button class="btn btn-ghost btn-sm" type="submit">
+        {{ _('Switch to Demo') if nav_mode == 'real' else _('Switch to Real Email') }}
+      </button>
+    </form>
+    <span class="nav-email">{{ nav_user_name or nav_user_email }}</span>
+    <form method="post" action="{{ url_for('pqmail.logout') }}" class="inline-form">
+      {{ csrf_field() }}
+      <button class="btn btn-ghost btn-sm" type="submit">{{ _('Sign out') }}</button>
+    </form>
+    {% endif %}
+    <button class="btn btn-ghost btn-sm" type="button" id="theme-toggle" aria-label="{{ _('Toggle light/dark theme') }}" title="{{ _('Toggle light/dark theme') }}">&#9680;</button>
+    {% if not no_lang_switch %}
+    <span class="lang-switch" aria-label="{{ _('Language') }}">
+      {% for code, name in LANGUAGES.items() %}
+        <a href="{{ lang_url(code) }}" lang="{{ code }}" class="{{ 'active' if code == current_language() }}">{{ name }}</a>
+      {% endfor %}
+    </span>
+    {% endif %}
+  </div>
+</nav>
+
+<main class="container" id="main">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack" aria-live="polite">
+        {% for category, text in messages %}
+          <div class="flash flash-{{ category }}" role="alert">{{ text }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p>
+    <strong>PQMail</strong> — {{ _('educational prototype. Real X25519 + ML-KEM-768 (FIPS 203) & ML-DSA-65 (FIPS 204) via pyca/cryptography. The QKD page is an educational simulation, not real quantum hardware. Not audited — do not use for sensitive data.') }}
+  </p>
+</footer>
+<script src="{{ static_url('js/app.js') }}" defer></script>
+</body>
+</html>

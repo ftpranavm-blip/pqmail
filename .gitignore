@@ -1,0 +1,35 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Sensitive / runtime data — NEVER commit these
+.env
+data/
+data/logs/
+data/keys/
+data/demo_mailbox/
+data/demo_credentials.json
+*.db
+*.sqlite3
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs, previews, editor/agent state
+server.log
+*.log
+.freebuff/
+.claude/
+*.tmp
+*.keystore.json.new
+real-data/
+*.pqpub.bak

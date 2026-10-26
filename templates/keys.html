@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Keys') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Your Quantum-Safe Identity') }}</h1>
+  <div class="form-actions">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.keys_export') }}">⬇ {{ _('Export public keys') }}</a>
+    <form method="post" action="{{ url_for('pqmail.keys_publish') }}" class="inline-form">
+      {{ csrf_field() }}
+      <button class="btn btn-ghost btn-sm" type="submit">⬆ {{ _('Publish to directory') }}</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <h3 class="section-title">🔒 {{ _('Encryption (post-quantum)') }}</h3>
+    <table class="data">
+      <tr><th>{{ _('Algorithm') }}</th><td><span class="badge badge-info">{{ algos.kem.name }}</span></td></tr>
+      <tr><th>{{ _('Standard') }}</th><td class="small muted">{{ algos.kem.standard }}</td></tr>
+      <tr><th>{{ _('Status') }}</th><td><span class="badge badge-ok">{{ _('Active') }}</span></td></tr>
+      <tr><th>{{ _('Fingerprint') }}</th><td class="mono small">{{ info.kem_fingerprint }}</td></tr>
+      <tr><th>{{ _('Created') }}</th><td class="small mono">{{ info.created_at }}</td></tr>
+    </table>
+    <p class="muted small">
+      {{ _('Predecessor naming:') }} <span class="mono">{{ algos.kem.predecessor }}</span> — {{ _('the same lattice problem under its older implementation name.') }}
+    </p>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">🔒 {{ _('Encryption (classical half)') }}</h3>
+    <table class="data">
+      <tr><th>{{ _('Algorithm') }}</th><td><span class="badge badge-info">X25519</span></td></tr>
+      <tr><th>{{ _('Standard') }}</th><td class="small muted">RFC 7748</td></tr>
+      <tr><th>{{ _('Status') }}</th><td>{% if info.x25519_fingerprint %}<span class="badge badge-ok">{{ _('Active') }}</span>{% else %}<span class="badge badge-warn">{{ _('Missing') }}</span>{% endif %}</td></tr>
+      <tr><th>{{ _('Fingerprint') }}</th><td class="mono small">{{ info.x25519_fingerprint or '—' }}</td></tr>
+    </table>
+    <p class="muted small">{{ _('Combined with ML-KEM-768 in every new message: the message key stays safe unless both algorithms are broken.') }}</p>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">✍ {{ _('Digital Signature') }}</h3>
+    <table class="data">
+      <tr><th>{{ _('Algorithm') }}</th><td><span class="badge badge-info">{{ algos.signature.name }}</span></td></tr>
+      <tr><th>{{ _('Standard') }}</th><td class="small muted">{{ algos.signature.standard }}</td></tr>
+      <tr><th>{{ _('Status') }}</th><td><span class="badge badge-ok">{{ _('Active') }}</span></td></tr>
+      <tr><th>{{ _('Fingerprint') }}</th><td class="mono small">{{ info.sig_fingerprint }}</td></tr>
+      <tr><th>{{ _('Created') }}</th><td class="small mono">{{ info.created_at }}</td></tr>
+    </table>
+    <p class="muted small">
+      {{ _('Predecessor naming:') }} <span class="mono">{{ algos.signature.predecessor }}</span>.
+    </p>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3 class="section-title">{{ _('Rotate keys') }}</h3>
+    <p class="muted small">
+      {{ _('Generates brand-new ML-KEM-768, X25519 and ML-DSA-65 keys, archives the old encrypted keystore (nothing is silently overwritten) and republishes the new public keys. Your previous private keys are carried into the new keystore, so messages encrypted to an old key stay readable and mail signed with an old key still verifies.') }}
+    </p>
+    <form method="post" action="{{ url_for('pqmail.keys_rotate') }}">
+      {{ csrf_field() }}
+      <label for="old_passphrase">{{ _('Current passphrase') }}</label>
+      <input type="password" id="old_passphrase" name="old_passphrase" required>
+      <label for="new_passphrase">{{ _('New passphrase (min 8 chars)') }}</label>
+      <input type="password" id="new_passphrase" name="new_passphrase" minlength="8" required>
+      <label for="confirm">{{ _('Repeat new passphrase') }}</label>
+      <input type="password" id="confirm" name="confirm" minlength="8" required>
+      <div class="form-actions">
+        <button class="btn btn-danger" type="submit"
+                data-confirm="{{ _('Rotate keys? New mail will use the new keys; old mail stays readable.') }}">
+          {{ _('Rotate keys') }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">{{ _('Key storage facts') }}</h3>
+    <ul class="status-list small">
+      <li>✓ {{ _('Private keys are encrypted with Argon2id + AES-256-GCM on this machine') }}</li>
+      <li>✓ {{ _('Public keys are published in the demo directory') if info.published else _('Public keys are not yet published in the demo directory') }}</li>
+      <li>✓ {{ _('%(n)s public-key entries recorded for this identity', n=key_count) }}</li>
+      <li>✓ {{ _('%(n)s retired key pairs kept in your keystore so older mail stays readable', n=info.retired_keys) }}</li>
+      <li>✗ {{ _('Private keys are never shown, exported, logged or sent') }}</li>
+      <li>✗ {{ _('No private key material exists in cookies, templates or JavaScript') }}</li>
+    </ul>
+    <p class="muted small mb-0">
+      {{ _('Keystore location:') }} <span class="mono">data/keys/</span> ({{ _('outside all web-served folders') }}).
+    </p>
+  </div>
+</div>
+{% endblock %}

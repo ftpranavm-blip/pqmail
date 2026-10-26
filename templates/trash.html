@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Trash') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Trash') }} <span class="muted small">({{ total }})</span></h1>
+  {% if items %}
+  <form method="post" action="{{ url_for('pqmail.trash_empty') }}" class="inline-form">
+    {{ csrf_field() }}
+    <button class="btn btn-danger btn-sm" type="submit"
+            data-confirm="{{ _('Permanently delete everything in the trash? This cannot be undone.') }}">{{ _('Empty trash') }}</button>
+  </form>
+  {% endif %}
+</div>
+<p class="muted small">{{ _('Deleted messages stay here until you delete them permanently. A permanently deleted message cannot be re-imported (replay protection).') }}</p>
+
+{% if items %}
+  {% for item in items %}
+  <div class="mail-item">
+    <div class="who">{% if item.folder == 'sent' %}{{ _('To:') }} {{ item.recipient }}{% else %}{{ item.sender }}{% endif %}</div>
+    <div class="subj">
+      <div>{% if item.subject %}{{ item.subject }}{% else %}<em>&#128274; {{ _('Encrypted message') }}</em>{% endif %}</div>
+      <span class="badge badge-info">{{ _('Sent') if item.folder == 'sent' else _('Inbox') }}</span>
+    </div>
+    <div class="when">{{ item.timestamp }}</div>
+    <div class="form-actions">
+      <form method="post" action="{{ url_for('pqmail.message_restore', message_id=item.message_id) }}" class="inline-form">
+        {{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit">{{ _('Restore') }}</button>
+      </form>
+      <form method="post" action="{{ url_for('pqmail.message_purge', message_id=item.message_id) }}" class="inline-form">
+        {{ csrf_field() }}<button class="btn btn-danger btn-sm" type="submit"
+          data-confirm="{{ _('Permanently delete this message?') }}">{{ _('Delete forever') }}</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card"><p class="muted">{{ _('The trash is empty.') }}</p></div>
+{% endif %}
+{% endblock %}

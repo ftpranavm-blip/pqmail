@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Two-factor authentication') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ _('Two-factor authentication') }}</h1>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.settings_page') }}">&larr; {{ _('Settings') }}</a>
+</div>
+
+{% if enabled %}
+<div class="grid grid-2">
+  <div class="card security-panel">
+    <h3 class="section-title"><span class="check-ok">✓</span> {{ _('Two-factor authentication is ON') }}</h3>
+    <p class="muted small">{{ _('Recovery codes left: %(left)s of %(total)s.', left=codes_left, total=total_codes) }}</p>
+    <form method="post" action="{{ url_for('pqmail.twofa_recovery') }}">
+      {{ csrf_field() }}
+      <label for="rp">{{ _('Your passphrase (to create new recovery codes)') }}</label>
+      <input type="password" id="rp" name="passphrase" required>
+      <div class="form-actions"><button class="btn btn-ghost btn-sm" type="submit"
+        data-confirm="{{ _('Replace all recovery codes with new ones?') }}">{{ _('Regenerate recovery codes') }}</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h3 class="section-title">{{ _('Turn two-factor off') }}</h3>
+    <form method="post" action="{{ url_for('pqmail.twofa_disable') }}" autocomplete="off">
+      {{ csrf_field() }}
+      <label for="dp">{{ _('Your passphrase') }}</label>
+      <input type="password" id="dp" name="passphrase" required>
+      <label for="dc">{{ _('Authenticator or recovery code') }}</label>
+      <input type="text" id="dc" name="code" inputmode="numeric" maxlength="20" required>
+      <div class="form-actions"><button class="btn btn-danger btn-sm" type="submit">{{ _('Turn off') }}</button></div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="grid grid-2">
+  <div class="card">
+    <h3 class="section-title">1. {{ _('Scan with an authenticator app') }}</h3>
+    <p class="muted small">{{ _('Use Google Authenticator, Microsoft Authenticator, Aegis, 1Password or any TOTP app.') }}</p>
+    {% if qr %}<p><img class="qr" src="{{ qr }}" alt="{{ _('QR code for the authenticator app') }}" width="200" height="200"></p>{% endif %}
+    <p class="muted small">{{ _("Can't scan? Enter this key manually:") }}</p>
+    <p class="key-display">{{ secret }}</p>
+  </div>
+  <div class="card">
+    <h3 class="section-title">2. {{ _('Confirm it works') }}</h3>
+    <form method="post" action="{{ url_for('pqmail.twofa_enable') }}" autocomplete="off">
+      {{ csrf_field() }}
+      <label for="code">{{ _('6-digit code from the app') }}</label>
+      <input type="text" id="code" name="code" inputmode="numeric" maxlength="8" required>
+      <label for="passphrase">{{ _('Your passphrase (the secret is stored inside your encrypted keystore)') }}</label>
+      <input type="password" id="passphrase" name="passphrase" required>
+      <div class="form-actions"><button class="btn" type="submit">{{ _('Turn on two-factor') }}</button></div>
+    </form>
+    <p class="muted small mb-0">{{ _('You will get 8 one-time recovery codes. Two-factor protects the web sign-in; it cannot protect against someone who steals the keystore file and guesses the passphrase offline.') }}</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

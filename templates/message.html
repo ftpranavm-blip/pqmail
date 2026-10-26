@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Message') }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ msg.subject }}</h1>
+  <div class="form-actions">
+    {% if msg.trusted and not in_trash %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.compose_page', reply_to=message_id) }}">&#8617; {{ _('Reply') }}</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.compose_page', forward=message_id) }}">&#8618; {{ _('Forward') }}</a>
+    {% endif %}
+    {% if in_trash %}
+      <form method="post" action="{{ url_for('pqmail.message_restore', message_id=message_id) }}" class="inline-form">
+        {{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit">{{ _('Restore') }}</button></form>
+      <form method="post" action="{{ url_for('pqmail.message_purge', message_id=message_id) }}" class="inline-form">
+        {{ csrf_field() }}<button class="btn btn-danger btn-sm" type="submit"
+          data-confirm="{{ _('Permanently delete this message?') }}">{{ _('Delete forever') }}</button></form>
+    {% else %}
+      <form method="post" action="{{ url_for('pqmail.message_delete', message_id=message_id) }}" class="inline-form">
+        {{ csrf_field() }}<button class="btn btn-ghost btn-sm" type="submit">&#128465; {{ _('Delete') }}</button></form>
+    {% endif %}
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('pqmail.sent' if folder == 'sent' else ('pqmail.trash' if in_trash else 'pqmail.inbox')) }}">&larr; {{ _('Back') }}</a>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div>
+    <div class="card">
+      <p class="muted small mb-4">
+        {{ _('From') }} <strong>{{ msg.sender }}</strong> {{ _('to') }} <strong>{{ msg.recipient }}</strong>
+        · {{ msg.timestamp }}
+      </p>
+      {% if msg.body %}
+        <div class="message-body">{{ msg.body }}</div>
+      {% elif msg.trusted %}
+        <div class="message-body muted">{{ _('(empty message)') }}</div>
+      {% else %}
+        <div class="withheld">
+          {{ _('Content withheld.') }}<br>
+          <span class="small">{{ _('The signature or integrity check failed, so this message is not trusted and its contents are not displayed.') }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if msg.attachments %}
+    <div class="card">
+      <h3 class="section-title">&#128206; {{ _('Attachments') }} ({{ msg.attachments|length }})</h3>
+      <ul class="status-list">
+        {% for a in msg.attachments %}
+        <li>
+          <a href="{{ url_for('pqmail.attachment_download', message_id=message_id, index=a.index) }}">{{ a.name }}</a>
+          <span class="muted small">· {{ a.size|filesize }} · {{ a.content_type }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="muted small mb-0">{{ _('Downloads are decrypted on demand and never opened inside the page.') }}</p>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h3 class="section-title">{{ _('Quantum-Safe Protection') }}</h3>
+      <ul class="status-list">
+        <li>
+          {% if msg.signature_valid %}<span class="check-ok">✓</span> {{ msg.algorithms.signature }} {{ _('Signature Verified') }}
+          {% else %}<span class="check-bad">✗</span> {{ msg.algorithms.signature }} {{ _('Signature Verification Failed') }}{% endif %}
+        </li>
+        <li>
+          {% if msg.integrity_valid %}<span class="check-ok">✓</span> {{ _('AES-GCM Integrity Verified') }}
+          {% else %}<span class="check-bad">✗</span> {{ _('Message integrity check failed') }}{% endif %}
+        </li>
+        <li><span class="check-ok">✓</span> {{ msg.algorithms.kem }} {{ _('key establishment') }}</li>
+        <li><span class="check-ok">✓</span> {{ msg.algorithms.symmetric }} {{ _('encryption') }}</li>
+        <li><span class="check-ok">✓</span> {{ msg.algorithms.kdf }} {{ _('key derivation') }}</li>
+      </ul>
+      {% if msg.envelope_version == '1.0' %}
+        <p class="small badge badge-warn">{{ _('This message used the older ML-KEM-only format (no X25519 half).') }}</p>
+      {% endif %}
+      {% if msg.signature_valid and not msg.sender_key_current %}
+        <p class="small badge badge-warn">
+          {{ _('Signed with an earlier key of %(sender)s: the sender has rotated keys since this was sent.', sender=msg.sender) }}
+        </p>
+      {% endif %}
+      {% if not msg.sender_key_known %}
+        <p class="small badge badge-warn">
+          {{ _('No public key matching the fingerprint in this message is in the directory, so the signature could not be checked.') }}
+        </p>
+      {% endif %}
+      {% if not (msg.signature_valid and msg.integrity_valid) %}
+        <p class="small badge badge-bad">
+          {{ _('Do not trust this message. It may have been modified in transit or forged.') }}
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h3 class="section-title">{{ _('Security details') }}</h3>
+      <table class="data">
+        <tr><th>{{ _('Encryption') }}</th><td>{{ msg.algorithms.kem }} + {{ msg.algorithms.symmetric }}</td></tr>
+        <tr><th>{{ _('Signature') }}</th><td>{{ msg.algorithms.signature }}</td></tr>
+        <tr><th>KDF</th><td>{{ msg.algorithms.kdf }}</td></tr>
+        <tr><th>{{ _('Envelope') }}</th><td>v{{ msg.envelope_version }}</td></tr>
+        <tr><th>{{ _('Sender fingerprint') }}</th><td class="mono small">{{ msg.sender_fingerprint }}</td></tr>
+        <tr><th>{{ _('Integrity') }}</th>
+            <td>{% if msg.integrity_valid %}<span class="badge badge-ok">{{ _('Verified') }}</span>
+                {% else %}<span class="badge badge-bad">{{ _('Failed') }}</span>{% endif %}</td></tr>
+        <tr><th>{{ _('Signature') }}</th>
+            <td>{% if msg.signature_valid %}<span class="badge badge-ok">{{ _('Verified') }}</span>
+                {% else %}<span class="badge badge-bad">{{ _('Failed') }}</span>{% endif %}</td></tr>
+      </table>
+    </div>
+
+    {% if demo_tools %}
+    <div class="card">
+      <h3 class="section-title">{{ _('Tamper detection demo') }}</h3>
+      <p class="muted small">
+        {{ _('Simulates an attacker modifying the stored ciphertext (one flipped bit). Open the message afterwards: the ML-DSA signature and the AES-GCM tag must both fail, and the content must stay withheld.') }}
+      </p>
+      <form method="post" action="{{ url_for('pqmail.message_tamper', message_id=message_id) }}"
+            data-confirm="{{ _('Flip one bit of the ciphertext to demonstrate tamper detection?') }}">
+        {{ csrf_field() }}
+        <button class="btn btn-danger" type="submit">&#9889; {{ _('Simulate Tampering') }}</button>
+      </form>
+      {% if msg.tampered_demo %}
+        <p class="small badge badge-warn mt-10">{{ _('This message was modified by the tamper demo.') }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

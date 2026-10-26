@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Sign in') }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ _('Sign in') }}</h1></div>
+<div class="grid grid-2">
+  <div class="card">
+    <form method="post" action="{{ url_for('pqmail.login_submit') }}">
+      {{ csrf_field() }}
+      <label for="email">{{ _('Email address') }}</label>
+      <input type="email" id="email" name="email" placeholder="alice@pqmail.local" required autofocus>
+      <label for="passphrase">{{ _('Keystore passphrase') }}</label>
+      <input type="password" id="passphrase" name="passphrase" required>
+      <div class="form-actions">
+        <button class="btn" type="submit">{{ _('Unlock keys & sign in') }}</button>
+        <a class="btn btn-ghost" href="{{ url_for('pqmail.register_page') }}">{{ _('Create an identity') }}</a>
+      </div>
+      <p class="muted small mt-14">
+        {{ _('Your passphrase never leaves this machine. It decrypts the local keystore (Argon2id + AES-256-GCM) and the unlocked private keys stay in RAM for this session only.') }}
+      </p>
+    </form>
+  </div>
+  <div>
+  {% if demo_enabled %}
+  <div class="card">
+    <h3>{{ _('Demo accounts') }}</h3>
+    <p class="muted small">{{ _('One click fills the form (passphrase') }} <span class="mono">{{ demo_passphrase }}</span>).</p>
+    {% for email, name in demo_users %}
+      <button type="button" class="btn btn-ghost demo-btn"
+              data-demo-user="{{ email }}" data-demo-pass="{{ demo_passphrase }}">
+        {{ name }} — {{ email }}
+      </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="card">
+    <h3>{{ _('Unlock with the OS keyring') }}</h3>
+    <p class="muted small">{{ _('Only works if you enrolled this identity under Settings.') }}</p>
+    <form method="post" action="{{ url_for('pqmail.login_keyring') }}">
+      {{ csrf_field() }}
+      <label for="keyring_email">{{ _('Email address') }}</label>
+      <input type="email" id="keyring_email" name="email" required>
+      <div class="form-actions"><button class="btn btn-ghost btn-sm" type="submit">{{ _('Unlock with keyring') }}</button></div>
+    </form>
+  </div>
+  </div>
+</div>
+{% endblock %}
